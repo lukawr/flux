@@ -61,8 +61,65 @@ def open_file (file_name, column_name, number_of_columns):
         for i in range (num_cols):
             variable_list[i].append(float(p[i]))
  
-#    return variable_list
-    return 0
+    return 0 # Loaded values are stored in a list of global variables
+
+def x_for_interp (inp_energy):
+
+    in_ene = np.array([])
+    in_ene = np.append(in_ene, inp_energy)
+    in_ene_sel_index = np.where(in_ene >= 1.) # only energies above 1 MeV
+
+    in_ene_sel = np.array([])
+    for indices in in_ene_sel_index:
+        in_ene_sel = np.append(in_ene_sel, in_ene[indices])
+    
+    out_ene = np.array([]) # array of energies in which CS will be calculated
+    out_num_of_int = np.array([]) # array with number of intervals
+    
+    for i in range (1,len(in_ene_sel)):
+        if in_ene_sel[i] < 187:
+            division_10 = (in_ene_sel[i] - in_ene_sel[i-1])/10. # 1/10 of each interval
+            mid_point_10 = division_10 / 2.
+            mid_points  = np.linspace( in_ene_sel[i-1] + mid_point_10 , in_ene_sel[i] - mid_point_10,10) # array of midpoints
+            out_num_of_int = np.append(out_num_of_int, 10)
+
+        else:
+            number_of_intervals = int(in_ene_sel[i]-in_ene_sel[i-1]) / 2 # intervals a approx. 2 MeV
+            step_2_MeV = float((in_ene_sel[i]-in_ene_sel[i-1]) / number_of_intervals)
+            mid_points  = np.linspace( in_ene_sel[i-1] + (step_2_MeV / 2.) , in_ene_sel[i] - (step_2_MeV / 2.), number_of_intervals)
+            out_num_of_int = np.append(out_num_of_int, number_of_intervals)
+        out_ene = np.append(out_ene, mid_points)
+
+    return (out_ene, in_ene_sel, out_num_of_int)
+
+def xs_interp (inp_ene, inp_xs, inp_ene_interp, plot_cs):
+
+    inp_ene = inp_ene # energies from Talys
+    inp_xs  = inp_xs  # xs from talys
+    inp_ene_interps = inp_ene_interp # energies for interpolation
+    out_xs_A = []
+    out_xs = np.array([]) # iterpolated xs
+    plot_fig = plot_cs
+    
+    x_ene = np.linspace (0,660,3301)
+    
+    spl = UnivariateSpline(inp_ene, inp_xs, s = 0.25)
+    y_xs = spl(x_ene)
+
+    for inp_ene_interp in inp_ene_interps:
+        out_xs_A.append(spl.__call__(inp_ene_interp))
+    
+    out_xs = np.append(out_xs, out_xs_A)
+
+    # optional_plot
+
+    if plot_fig:
+        plt.plot (inp_ene, inp_xs, 'ro', ms = 5)
+        plt.plot (x_ene, y_xs, lw = 3, c = 'g', alpha = 0.6)
+        plt.plot (inp_ene_interps, out_xs, 'o', ms = 3)
+        plt.show()
+    
+    return out_xs
 
 # MAIN BODY
 
@@ -117,8 +174,28 @@ open_file (input_flux_p_N14, "flux_p14_", 60)
 
 open_file (input_flux_p_A15, "flux_p15_", 48)
 
+# Abstraction of energy points for interpolation of cross sections, arrays of energy boundaries between reactions and number of points per each interval 
+
+input_flux = flux_n14_0 # A propper file with energies <flux_p/n14/15_i> i = 0,3,6,...
+
+x_for_extrapol = np.array([])
+energy_boundaries = np.array([])
+energy_intervals = np.array([])
+
+x_for_extrapol, energy_boundaries, energy_intervals = x_for_interp(input_flux) 
+
+# Interpolation of cross section for given eneries
+
+input_energy = xs_Al_0 # energies from talys
+input_xs = xs_Al_1    # cross section for interpolation
+plot_yn = False
+xs_interpolated = np.array([])
+
+xs_interpolated = xs_interp (input_energy, input_xs, x_for_extrapol, plot_yn)
+
 # TEST:
 
-print (flux_n14_0[:])
+print (energy_boundaries)
+
 
     
