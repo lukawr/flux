@@ -1,3 +1,4 @@
+
 """
  Program for calculation of neutron flux based on experimental reaction rates 
  and drawing comparison between experimental values and results of simulation
@@ -67,7 +68,7 @@ def x_for_interp (inp_energy):
 
     in_ene = np.array([])
     in_ene = np.append(in_ene, inp_energy)
-    in_ene_sel_index = np.where(in_ene >= 1.) # only energies above 1 MeV
+    in_ene_sel_index = np.where(in_ene > 1.) # only energies above 1 MeV
 
     in_ene_sel = np.array([])
     for indices in in_ene_sel_index:
@@ -90,7 +91,13 @@ def x_for_interp (inp_energy):
             out_num_of_int = np.append(out_num_of_int, number_of_intervals)
         out_ene = np.append(out_ene, mid_points)
 
-    return (out_ene, in_ene_sel, out_num_of_int)
+    delta_e_ar = [] 
+    delta_e_np = np.array([]) # delta E for each bin between boundaries 
+    for i in range (1,len(in_ene_sel)):
+        delta_e_ar.append((in_ene_sel[i] - in_ene_sel[i-1])/out_num_of_int[i-1])
+    delta_e_np = np.append(delta_e_np, delta_e_ar)
+        
+    return (out_ene, in_ene_sel, out_num_of_int, delta_e_np)
 
 def xs_interp (inp_ene, inp_xs, inp_ene_interp, plot_cs):
 
@@ -174,28 +181,68 @@ open_file (input_flux_p_N14, "flux_p14_", 60)
 
 open_file (input_flux_p_A15, "flux_p15_", 48)
 
+# Collection of necessary data for further calculation
+# Sample = Al3 = cell 373 N14
+
+input_flux_ene = flux_n14_36 # A propper file with energies <flux_p/n14/15_i> i = 0,3,6,...
+input_reactions = [xs_Co_6, xs_Al_1, xs_Au_2, xs_Co_2, xs_Bi_1, xs_Co_3, xs_Au_4, xs_Au_5, xs_Co_4, xs_Au_6, xs_Au_7]
+input_rr_exp  = [rr_4[4],rr_4[0],rr_4[10],rr_4[5],rr_4[16],rr_4[6],rr_4[12],rr_4[13],rr_4[7],rr_4[14],rr_4[15]]
+input_drr_exp = [rr_5[4],rr_5[0],rr_5[10],rr_5[5],rr_5[16],rr_5[6],rr_5[12],rr_5[13],rr_5[7],rr_5[14],rr_5[15]]
+
 # Abstraction of energy points for interpolation of cross sections, arrays of energy boundaries between reactions and number of points per each interval 
 
-input_flux = flux_n14_0 # A propper file with energies <flux_p/n14/15_i> i = 0,3,6,...
+x_for_interpol = np.array([])    # energies (mid-bins) for which interpolation is calculated
+energy_boundaries = np.array([]) # energy boundaries of xs (thresholds) and neutron flux
+energy_intervals = np.array([])  # number of energy bins between the given boundaries
 
-x_for_extrapol = np.array([])
-energy_boundaries = np.array([])
-energy_intervals = np.array([])
+x_for_interpol, energy_boundaries, energy_intervals, energy_bin_widths = x_for_interp(input_flux_ene) 
+energy_intervals_cumulative = np.cumsum(energy_intervals)
+energy_intervals_cumulative = np.insert(energy_intervals_cumulative,0,0)
 
-x_for_extrapol, energy_boundaries, energy_intervals = x_for_interp(input_flux) 
 
 # Interpolation of cross section for given eneries
 
+plot_yn = False # on/off plot of interpolated cross sections
 input_energy = xs_Al_0 # energies from talys
-input_xs = xs_Al_1    # cross section for interpolation
-plot_yn = False
-xs_interpolated = np.array([])
 
-xs_interpolated = xs_interp (input_energy, input_xs, x_for_extrapol, plot_yn)
+scope = globals()
+list_xs_interp = [] # list members are np.arrays of interpolated xs, order as in "input_reactions"
 
+for i in range(len(input_reactions)):
+    xs_intrplt = np.array([])
+    scope['xs_interpolated_' + str(i)] = xs_intrplt
+    list_xs_interp.append(xs_intrplt)
+
+for i in range(len(list_xs_interp)):
+    list_xs_interp[i] = xs_interp (input_energy, input_reactions[i], x_for_interpol, plot_yn)
+
+    
+# EXPERIMENTAL FLUX CALCULATION
+
+scope = globals()
+flux_list = [] # declaration of list of experimental fluxes 
+
+for i in range(len(input_reactions)):
+    flux_i = float() 
+    scope['flux_' + str(i)] = flux_i
+    flux_list.append(flux_i)
+
+for i in range(len(flux_list)-1,9,-1): # descending order, does not include (n,g) reaction
+    #first attempt - the last reacion
+    print(i)
+    sum_xsE = ( np.sum(list_xs_interp[i][energy_intervals_cumulative[i]:energy_intervals_cumulative[i+1]]) ) * energy_bin_widths[i]
+    #print sum_xsE
+    flux_list[i] = (input_rr_exp[i]/sum_xsE)*1e27
+
+    
 # TEST:
 
-print (energy_boundaries)
+print (energy_intervals)
+print (energy_intervals_cumulative)
+print (energy_bin_widths)
+print (len(flux_list))
+print (len(list_xs_interp[10]))
+print (flux_list)
 
 
     
