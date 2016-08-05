@@ -220,29 +220,55 @@ for i in range(len(list_xs_interp)):
 # EXPERIMENTAL FLUX CALCULATION
 
 scope = globals()
-flux_list = [] # declaration of list of experimental fluxes 
+flux_list = [] # declaration of list of experimental fluxes
+xse_list  = [] # declaration of partial sums
 
 for i in range(len(input_reactions)):
-    flux_i = float() 
+    flux_i = float(0)
+    sum_xse = np.zeros(len(input_reactions))
     scope['flux_' + str(i)] = flux_i
+    scope['xse_'  + str(i)] = sum_xse
     flux_list.append(flux_i)
+    xse_list.append(sum_xse)
 
-for i in range(len(flux_list)-1,9,-1): # descending order, does not include (n,g) reaction
-    #first attempt - the last reacion
-    print(i)
-    sum_xsE = ( np.sum(list_xs_interp[i][energy_intervals_cumulative[i]:energy_intervals_cumulative[i+1]]) ) * energy_bin_widths[i]
-    #print sum_xsE
-    flux_list[i] = (input_rr_exp[i]/sum_xsE)*1e27
 
+# "Matice" soucinu xs * bin_E pro jednotlive reakce (i) a energeticke intervaly (j)
+for i in range(len(input_reactions)):
+    for j in range (len(input_reactions)):
+        if j >= i: 
+            xse_list[i][j] = ( np.sum(list_xs_interp[i][energy_intervals_cumulative[j]:energy_intervals_cumulative[j+1]]) ) * energy_bin_widths[j]
+        else:
+            continue
+
+flux_list[ -1] = (input_rr_exp[ -1] / xse_list[-1][-1]) # TODO: *1e27
+flux_list[ -2] = (input_rr_exp[ -2]-flux_list[ -1]*xse_list[ -2][ -1]) / xse_list[-2][-2]
+flux_list[ -3] = (input_rr_exp[ -3]-flux_list[ -2]*xse_list[ -3][ -2]-flux_list[ -1]*xse_list[ -3][ -1]) / xse_list[-3][-3]
+flux_list[ -4] = (input_rr_exp[ -4]-flux_list[ -3]*xse_list[ -4][ -3]-flux_list[ -2]*xse_list[ -4][ -2]-flux_list[ -1]*xse_list[ -4][ -1]) / xse_list[-4][-4]
+flux_list[ -5] = (input_rr_exp[ -5]-flux_list[ -4]*xse_list[ -5][ -4]-flux_list[ -3]*xse_list[ -5][ -3]-flux_list[ -2]*xse_list[ -5][ -2]-flux_list[ -1]*xse_list[ -5][ -1]) / xse_list[-5][-5]
+flux_list[ -6] = (input_rr_exp[ -6]-flux_list[ -5]*xse_list[ -6][ -5]-flux_list[ -4]*xse_list[ -6][ -4]-flux_list[ -3]*xse_list[ -6][ -3]-flux_list[ -2]*xse_list[ -6][ -2]-flux_list[ -1]*xse_list[ -6][ -1]) / xse_list[-6][-6]
+flux_list[ -7] = (input_rr_exp[ -7]-flux_list[ -6]*xse_list[ -7][ -6]-flux_list[ -5]*xse_list[ -7][ -5]-flux_list[ -4]*xse_list[ -7][ -4]-flux_list[ -3]*xse_list[ -7][ -3]-flux_list[ -2]*xse_list[ -7][ -2]-flux_list[ -1]*xse_list[ -7][ -1]) / xse_list[-7][-7]
+flux_list[ -8] = (input_rr_exp[ -8]-flux_list[ -7]*xse_list[ -8][ -7]-flux_list[ -6]*xse_list[ -8][ -6]-flux_list[ -5]*xse_list[ -8][ -5]-flux_list[ -4]*xse_list[ -8][ -4]-flux_list[ -3]*xse_list[ -8][ -3]-flux_list[ -2]*xse_list[ -8][ -2]-flux_list[ -1]*xse_list[ -8][ -1]) / xse_list[-8][-8]
+flux_list[ -9] = (input_rr_exp[ -9]-flux_list[ -8]*xse_list[ -9][ -8]-flux_list[ -7]*xse_list[ -9][ -7]-flux_list[ -6]*xse_list[ -9][ -6]-flux_list[ -5]*xse_list[ -9][ -5]-flux_list[ -4]*xse_list[ -9][ -4]-flux_list[ -3]*xse_list[ -9][ -3]-flux_list[ -2]*xse_list[ -9][ -2]-flux_list[ -1]*xse_list[ -9][ -1]) / xse_list[-9][-9]
+flux_list[-10] = (input_rr_exp[-10]-flux_list[ -9]*xse_list[-10][ -9]-flux_list[ -8]*xse_list[-10][ -8]-flux_list[ -7]*xse_list[-10][ -7]-flux_list[ -6]*xse_list[-10][ -6]-flux_list[ -5]*xse_list[-10][ -5]-flux_list[ -4]*xse_list[-10][ -4]-flux_list[ -3]*xse_list[-10][ -3]-flux_list[ -2]*xse_list[-10][ -2]-flux_list[ -1]*xse_list[-10][ -1]) / xse_list[-10][-10]
+flux_list[-11] = (input_rr_exp[-11]-flux_list[-10]*xse_list[-11][-10]-flux_list[ -9]*xse_list[-11][ -9]-flux_list[ -8]*xse_list[-11][ -8]-flux_list[ -7]*xse_list[-11][ -7]-flux_list[ -6]*xse_list[-11][ -6]-flux_list[ -5]*xse_list[-11][ -5]-flux_list[ -4]*xse_list[-11][ -4]-flux_list[ -3]*xse_list[-11][ -3]-flux_list[ -2]*xse_list[-11][ -2]-flux_list[ -1]*xse_list[-11][ -1]) / xse_list[-11][-11]
+#flux_list[-12] = (input_rr_exp[-12]-flux_list[-11]*xse_list[-12][-11]-flux_list[-10]*xse_list[-12][-10]-flux_list[ -9]*xse_list[-12][ -9]-flux_list[ -8]*xse_list[-12][ -8]-flux_list[ -7]*xse_list[-12][ -7]-flux_list[ -6]*xse_list[-12][ -6]-flux_list[ -5]*xse_list[-12][ -5]-flux_list[ -4]*xse_list[-12][ -4]-flux_list[ -3]*xse_list[-12][ -3]-flux_list[ -2]*xse_list[-12][ -2]-flux_list[ -1]*xse_list[-12][ -1]) / xse_list[-12][-12]
+#flux_list[-13] = (input_rr_exp[-13]-flux_list[-12]*xse_list[-13][-12]-flux_list[-11]*xse_list[-13][-11]-flux_list[-10]*xse_list[-13][-10]-flux_list[ -9]*xse_list[-13][ -9]-flux_list[ -8]*xse_list[-13][ -8]-flux_list[ -7]*xse_list[-13][ -7]-flux_list[ -6]*xse_list[-13][ -6]-flux_list[ -5]*xse_list[-13][ -5]-flux_list[ -4]*xse_list[-13][ -4]-flux_list[ -3]*xse_list[-13][ -3]-flux_list[ -2]*xse_list[-13][ -2]-flux_list[ -1]*xse_list[-13][ -1]) / xse_list[-13][-13]
+
+for i in range (len(flux_list)):
+    flux_list[i] = flux_list[i] * 1e27
+
+for i in range (len(flux_list)):
+    print ('flux {0} = {1}'.format(i, flux_list[i])) 
     
+   
 # TEST:
 
-print (energy_intervals)
+print (energy_boundaries)
+
+"""
 print (energy_intervals_cumulative)
 print (energy_bin_widths)
-print (len(flux_list))
-print (len(list_xs_interp[10]))
 print (flux_list)
-
+"""
 
     
